@@ -1,0 +1,9 @@
+faiss
+numpy
+pandas
+langchain
+langchain-nomic
+langchain-community
+tqdm
+langchain-ollama
+langchain-core

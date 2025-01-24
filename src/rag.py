@@ -7,6 +7,7 @@ from langchain.schema import Document
 from langchain_ollama import OllamaLLM
 from langchain.prompts import ChatPromptTemplate
 from langchain_core.prompts import PromptTemplate
+from langchain_community.vectorstores import VectorStore
 
 
 
@@ -21,7 +22,7 @@ def query_rag_chat(query_text: str, vector_store):
     {context}
     """
     # Perform similarity search in the existing vector store
-    results = vector_store.similarity_search(query_text, k=5)
+    results = vector_store.similarity_search(query_text, k=10)
 
     # If no relevant documents are found, return a message
     if not results:
@@ -30,6 +31,8 @@ def query_rag_chat(query_text: str, vector_store):
 
     # Extract text from retrieved documents
     context = " ".join([doc.page_content for doc in results])
+    # Extract document sources
+    sources = [doc.metadata.get("chunk_id") for doc in results]
 
     # Format the prompt
     prompt_template = ChatPromptTemplate.from_template(question_template)
@@ -41,10 +44,7 @@ def query_rag_chat(query_text: str, vector_store):
     # Generate response
     response = generation_model.invoke(prompt)
 
-    # Extract document sources
-    sources = [doc.metadata.get("chunk_id") for doc in results]
-
-    return context, response, sources
+    return response, sources
 
 def extract_book_title(documents: List[Document]):
        
@@ -215,8 +215,3 @@ def classify_books_from_docs(docs, genres: list) -> list:
         classified_books.append(response)
 
     return classified_books
-
-if __name__ == "__main__":
-    query = input("Enter your question: ")
-    result = query_rag_chat(query, vector_store) #vector_store is an output of embedding_database.py
-    print(result)

@@ -148,9 +148,3 @@ def load_vector_store(output_dir):
     print(f"FAISS index loaded from: {output_dir}")
     return vector_store
 
-if __name__ == "__main__":
-    proc_docs = process_documents(result) # result is the output of file_uploader.py
-    vector_store = process_documents(proc_docs) 
-    directory = input("Enter the path to the directory: ")
-    save_vector_store(vector_store, directory)
-    print("\nvectore store created and saved.")
