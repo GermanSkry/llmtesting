@@ -2,11 +2,15 @@ import os
 import faiss
 import numpy as np
 import pandas as pd
-import pickle
 from datetime import datetime
 from typing import Tuple
 from langchain.schema import Document
-from typing import Tuple, List, Dict
+from langchain_nomic import NomicEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_community.docstore.in_memory import InMemoryDocstore
+from uuid import uuid4
+from typing import Tuple, List
+
 
 output_dir = 'C:/Users/skrge/Documents/GitHub/llmtesting/output/'
 
@@ -88,90 +92,65 @@ def process_documents(all_docs: List[Document]) -> List[Document]:
 
     return processed_docs
 
-def create_vector_store(documents: List[Document], embeddings: List[List[float]]):
-    # Convert embeddings to a numpy array
-    embeddings_array = np.array(embeddings).astype('float32')
-    
-    # Create a FAISS index
-    dimension = embeddings_array.shape[1]
-    index = faiss.IndexFlatL2(dimension)
-    
-    # Add embeddings to the index
-    index.add(embeddings_array)
-    
-    # Store document metadata
-    doc_metadata = [doc.metadata for doc in documents]
-    
-    return index, doc_metadata, embeddings_array
 
-faiss_index_name = "faiss_index.bin"
-doc_metadata_name = "doc_metadata.pkl"
+def faiss_vector_store(processed_docs):
+    embeddings = NomicEmbeddings(model="nomic-embed-text-v1.5")
 
-def save_vector_store(faiss_index, doc_metadata, output_dir):
-    #faiss_index_name = "faiss_index.bin"
-    faiss_index_path = os.path.join(output_dir, faiss_index_name)
-    #doc_metadata_name = "doc_metadata.pkl"
-    metadata_path = os.path.join(output_dir, doc_metadata_name)
-    # Save the FAISS index
-    faiss.write_index(faiss_index, faiss_index_path)
+    # Create an empty FAISS index with the appropriate embedding dimension
+    index = faiss.IndexFlatL2(len(embeddings.embed_query("hello world")))
+
+    # Initialize FAISS vector store with an in-memory document store
+    vector_store = FAISS(
+        embedding_function=embeddings,  # The function to generate embeddings
+        index=index,  # The FAISS index to store vectors
+        docstore=InMemoryDocstore(),  # Stores original documents
+        index_to_docstore_id={}  # Mapping between FAISS index positions and document IDs
+    )
+
+    # Generate unique IDs for each document
+    uuids = [str(uuid4()) for _ in range(len(processed_docs))]
+
+    # Add documents to the vector store with generated UUIDs
+    vector_store.add_documents(documents=processed_docs, ids=uuids)
+
+    # Return the vector store with stored documents
+    return vector_store
+
+output_dir = r"C:\Users\skrge\Documents\GitHub\llmtesting\output"
+
+def save_vector_store(vector_store, output_dir):
+    #Saves the FAISS vector store to the specified directory.
     
-    # Save the document metadata
-    with open(metadata_path, 'wb') as f:
-        pickle.dump(doc_metadata, f)
-    
-    print(f"Vector store saved to {faiss_index_path} and {metadata_path}")
+    # Ensure the directory exists
+    os.makedirs(output_dir , exist_ok=True)
+
+    # Save the FAISS vector store
+    vector_store.save_local(output_dir )
+    print(f"FAISS index saved at: {output_dir }")
 
 def load_vector_store(output_dir):
-    #faiss_index = "faiss_index.bin"
-    faiss_index_path = os.path.join(output_dir, faiss_index_name)
-    #doc_metadata = "doc_metadata.pkl"
-    metadata_path = os.path.join(output_dir, doc_metadata_name)
-    # Load the FAISS index
-    faiss_index = faiss.read_index(faiss_index_path)
-    
-    # Load the document metadata
-    with open(metadata_path, 'rb') as f:
-        doc_metadata = pickle.load(f)
-    
-    print(f"Vector store loaded from {faiss_index_path} and {metadata_path}")
-    return faiss_index, doc_metadata
 
-"""
-Example usage:
-faiss_index_name = "faiss_index.bin" #names of file
-doc_metadata_name = "doc_metadata.pkl" #names of file
-save_vector_store(faiss_index, doc_metadata, output_dir)
-faiss_index, doc_metadata = load_vector_store(output_dir)
-"""
+    #Loads a FAISS vector store from the specified directory.
 
-def create_dataframe(documents: List[Document], embeddings: np.ndarray):
-    # Extract chunk_id and page_content from documents
-    data = {
-        'chunk_id': [doc.metadata['chunk_id'] for doc in documents],
-        'page_content': [doc.page_content for doc in documents],
-        'embeddings': list(embeddings)
-    }
-    
-    # Create a DataFrame
-    embedding_df = pd.DataFrame(data)
-    return embedding_df
+    embeddings = NomicEmbeddings(model="nomic-embed-text-v1.5")
 
-file_name = "embedding_df.csv"
+    # Check if the FAISS index exists before loading
+    if not os.path.exists(os.path.join(output_dir, "index.faiss")):
+        raise FileNotFoundError(f"No FAISS index found at: {output_dir}")
 
-def save_dataframe(embedding_df: pd.DataFrame, output_dir: str):
-    # Ensure the directory exists
-    output_path = os.path.join(output_dir, file_name)
-    
-    # Save the DataFrame as a CSV file
-    os.makedirs(output_dir, exist_ok=True)
-    embedding_df.to_csv(output_path , index=False)
-    print(f"DataFrame saved to {output_path}")
+    # Load the FAISS vector store with safe pickle deserialization
+    vector_store = FAISS.load_local(
+        output_dir, 
+        embeddings, 
+        allow_dangerous_deserialization=True  # Allows pickle loading
+    )
 
-def load_dataframe(input_dir: str) -> pd.DataFrame:
-    # Load the DataFrame from a CSV file
-    input_path = os.path.join(input_dir, file_name)
-    os.makedirs(input_dir, exist_ok=True)
-    df = pd.read_csv(input_path)
-    print(f"DataFrame loaded from {input_path}")
-    return df
+    print(f"FAISS index loaded from: {output_dir}")
+    return vector_store
 
+if __name__ == "__main__":
+    proc_docs = process_documents(result) # result is the output of file_uploader.py
+    vector_store = process_documents(proc_docs) 
+    directory = input("Enter the path to the directory: ")
+    save_vector_store(vector_store, directory)
+    print("\nvectore store created and saved.")
