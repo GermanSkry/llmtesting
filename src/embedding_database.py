@@ -12,7 +12,6 @@ from uuid import uuid4
 from typing import Tuple, List
 
 
-output_dir = 'C:/Users/skrge/Documents/GitHub/llmtesting/output/'
 
 def generate_chunk_id(doc: Document, current_page: int = None, current_page_part: int = 0) -> Tuple[str, int, int]:
     """
@@ -116,7 +115,6 @@ def faiss_vector_store(processed_docs):
     # Return the vector store with stored documents
     return vector_store
 
-output_dir = r"C:\Users\skrge\Documents\GitHub\llmtesting\output"
 
 def save_vector_store(vector_store, output_dir):
     #Saves the FAISS vector store to the specified directory.

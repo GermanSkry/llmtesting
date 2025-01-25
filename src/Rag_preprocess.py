@@ -4,19 +4,32 @@ import pandas as pd
 from typing import List, Union
 from langchain.schema import Document
 
+
 def combine_text_info(json_strings: List[str]) -> List[str]:
     combined_list = []
     
     for json_str in json_strings:
         try:
-            # Parse the JSON string
+            # Attempt to parse JSON
             text_list = json.loads(json_str)
-            # Extend the combined list with the parsed list
-            combined_list.extend(text_list)
+
+            # Ensure the parsed object is a list
+            if isinstance(text_list, list):
+                combined_list.extend(text_list)
+
         except json.JSONDecodeError:
-            print(f"Error decoding JSON: {json_str}")
-            continue
-    
+            # Attempt to fix common JSON issues
+            fixed_json_str = json_str.strip().rstrip(",")  # Remove trailing commas
+            if not fixed_json_str.endswith("]"):
+                fixed_json_str += "]"  # Ensure proper closing bracket
+
+            try:
+                text_list = json.loads(fixed_json_str)
+                if isinstance(text_list, list):
+                    combined_list.extend(text_list)
+            except json.JSONDecodeError:
+                pass  # Silently fail if the fix doesn't work
+
     return combined_list
 
 def preprocess_field(value: Union[str, None], field_type: str) -> str:
@@ -61,16 +74,16 @@ def create_dataframe_from_json_strings(json_strings: List[str]) -> pd.DataFrame:
     df = pd.DataFrame(parsed_data)
     
     # Ensure the DataFrame has the desired columns
-    desired_columns = ["Full_title", 
+    desired_columns = ["ISBN", 
                        "City", 
                        "Year", 
-                       "ISBN", 
                        "price", 
                        "book_shop_id", 
                        "pages", 
                        "colour", 
                        "size", 
                        "language"]
+    
     df = df.reindex(columns=desired_columns)
     
     return df

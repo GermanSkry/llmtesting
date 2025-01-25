@@ -1,6 +1,4 @@
-import re
-import json
-import tqdm
+from tqdm import tqdm
 from typing import List
 from collections import defaultdict
 from langchain.schema import Document
@@ -8,7 +6,7 @@ from langchain_ollama import OllamaLLM
 from langchain.prompts import ChatPromptTemplate
 from langchain_core.prompts import PromptTemplate
 from langchain_community.vectorstores import VectorStore
-
+from src.Rag_preprocess import extract_relevant_info
 
 
 def query_rag_chat(query_text: str, vector_store):
@@ -17,10 +15,17 @@ def query_rag_chat(query_text: str, vector_store):
     """
 
     question_template = """
-    Answer the {question} based only on the following context:
+        You're a helpful assistant with deep knowledge of books. 
+        Use the following context to answer the user's question in informative way.
 
-    {context}
-    """
+        User: {question}
+
+        Context:
+        {context}
+
+        Assistant:
+        """
+
     # Perform similarity search in the existing vector store
     results = vector_store.similarity_search(query_text, k=10)
 

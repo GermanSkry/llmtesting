@@ -93,8 +93,3 @@ def upload_files(directory: str) -> List[Document]:
             documents.extend(loaded_documents)
     
     return documents
-
-if __name__ == "__main__":
-    directory = input("Enter the path to the directory: ")
-    result = upload_files(directory)
-    print("\nAll files loaded successfully.")
